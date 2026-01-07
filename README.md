@@ -81,3 +81,9 @@ npm run dev
 #### Frontend Git Link: https://github.com/hasanulhasan/url_shortify_frontend
 #### Backend Git Link: https://github.com/hasanulhasan/url_shortify_backend
 
+## Test Credential
+
+#### Email: test@test.com
+#### Password: 123456
+
+
