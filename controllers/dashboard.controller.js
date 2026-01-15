@@ -1,4 +1,5 @@
 const Url = require('../models/Url');
+const mongoose = require('mongoose');
 
 exports.getUserUrls = async (req, res) => {
   try {
@@ -53,33 +54,36 @@ exports.getDashboardStats = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    // Get total URLs
-    const totalUrls = await Url.countDocuments({ user: userId });
+    const totalUrls = await Url.countDocuments({
+      user: new mongoose.Types.ObjectId(userId)
+    });
 
-    // Get total clicks
-    const totalClicks = await Url.aggregate([
-      { $match: { user: userId } },
+    const totalClicksAgg = await Url.aggregate([
+      { $match: { user: new mongoose.Types.ObjectId(userId) } },
       { $group: { _id: null, total: { $sum: '$clicks' } } }
     ]);
 
-    // Get recent clicks (last 7 days)
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
 
     const recentClicks = await Url.aggregate([
-      { $match: { user: userId, 'clickData.timestamp': { $gte: weekAgo } } },
+      { $match: { user: new mongoose.Types.ObjectId(userId) } },
       { $unwind: '$clickData' },
       { $match: { 'clickData.timestamp': { $gte: weekAgo } } },
-      { $group: { 
-        _id: { 
-          $dateToString: { format: '%Y-%m-%d', date: '$clickData.timestamp' } 
-        }, 
-        clicks: { $sum: 1 } 
-      }},
-      { $sort: { '_id': 1 } }
+      {
+        $group: {
+          _id: {
+            $dateToString: {
+              format: '%Y-%m-%d',
+              date: '$clickData.timestamp'
+            }
+          },
+          clicks: { $sum: 1 }
+        }
+      },
+      { $sort: { _id: 1 } }
     ]);
 
-    // Get top URLs by clicks
     const topUrls = await Url.find({ user: userId })
       .sort({ clicks: -1 })
       .limit(5)
@@ -89,7 +93,7 @@ exports.getDashboardStats = async (req, res) => {
       success: true,
       stats: {
         totalUrls,
-        totalClicks: totalClicks[0]?.total || 0,
+        totalClicks: totalClicksAgg[0]?.total || 0,
         recentClicks,
         topUrls
       }
